@@ -4914,7 +4914,7 @@ Dep. Variable:         current_smoker   No. Observations:                 6632
 Model:                          Logit   Df Residuals:                     6616
 Method:                           MLE   Df Model:                           15
 Date:                    화, 26 5 2026   Pseudo R-squ.:                  0.1207
-Time:                        18:48:46   Log-Likelihood:                -2920.0
+Time:                        18:54:28   Log-Likelihood:                -2920.0
 converged:                       True   LL-Null:                       -3320.9
 Covariance Type:            nonrobust   LLR p-value:                3.663e-161
 ==================================================================================================
@@ -5407,7 +5407,7 @@ Dep. Variable:             logit_WPct   R-squared (uncentered):                 
 Model:                            WLS   Adj. R-squared (uncentered):              0.895
 Method:                 Least Squares   F-statistic:                              1529.
 Date:                    화, 26 5 2026   Prob (F-statistic):                   4.27e-176
-Time:                        18:48:51   Log-Likelihood:                          316.44
+Time:                        18:54:33   Log-Likelihood:                          316.44
 No. Observations:                 360   AIC:                                     -628.9
 Df Residuals:                     358   BIC:                                     -621.1
 Df Model:                           2                                                  
@@ -5714,7 +5714,7 @@ Dep. Variable:             logit_WPct   R-squared:                       0.939
 Model:                            WLS   Adj. R-squared:                  0.937
 Method:                 Least Squares   F-statistic:                     448.1
 Date:                    화, 26 5 2026   Prob (F-statistic):          6.40e-203
-Time:                        18:48:56   Log-Likelihood:                 414.93
+Time:                        18:54:38   Log-Likelihood:                 414.93
 No. Observations:                 360   AIC:                            -803.9
 Df Residuals:                     347   BIC:                            -753.3
 Df Model:                          12                                         
@@ -5992,7 +5992,7 @@ Dep. Variable:                      W   No. Observations:                  360
 Model:               NegativeBinomial   Df Residuals:                      336
 Method:                           MLE   Df Model:                           23
 Date:                    화, 26 5 2026   Pseudo R-squ.:                 -0.3757
-Time:                        18:49:25   Log-Likelihood:                -1950.4
+Time:                        18:55:06   Log-Likelihood:                -1950.4
 converged:                      False   LL-Null:                       -1417.7
 Covariance Type:            nonrobust   LLR p-value:                     1.000
 ==============================================================================
@@ -6260,7 +6260,7 @@ Dep. Variable:             logit_WPct   R-squared (uncentered):                 
 Model:                            WLS   Adj. R-squared (uncentered):              0.892
 Method:                 Least Squares   F-statistic:                              2938.
 Date:                    화, 26 5 2026   Prob (F-statistic):                        0.00
-Time:                        18:49:27   Log-Likelihood:                          625.49
+Time:                        18:55:08   Log-Likelihood:                          625.49
 No. Observations:                 712   AIC:                                     -1247.
 Df Residuals:                     710   BIC:                                     -1238.
 Df Model:                           2                                                  
@@ -6322,12 +6322,12 @@ Notes:
 <span id="cb151-8"><a href="#cb151-8" aria-hidden="true" tabindex="-1"></a>    ax.scatter(sub[<span class="st">&quot;RA&quot;</span>] <span class="op">/</span> sub[<span class="st">&quot;RS&quot;</span>], sub[<span class="st">&quot;WPct&quot;</span>],</span>
 <span id="cb151-9"><a href="#cb151-9" aria-hidden="true" tabindex="-1"></a>               alpha<span class="op">=</span><span class="fl">0.35</span>, s<span class="op">=</span><span class="dv">18</span>, color<span class="op">=</span>color, label<span class="op">=</span>label)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>&lt;matplotlib.collections.PathCollection object at 0x000001743FB63B50&gt;
-&lt;matplotlib.collections.PathCollection object at 0x000001743FB0BAD0&gt;</code></pre>
+<pre><code>&lt;matplotlib.collections.PathCollection object at 0x00000192441FA4D0&gt;
+&lt;matplotlib.collections.PathCollection object at 0x00000191FC7DDA90&gt;</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb153"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb153-1"><a href="#cb153-1" aria-hidden="true" tabindex="-1"></a>ax.axvline(<span class="fl">1.0</span>, color<span class="op">=</span><span class="st">&quot;gray&quot;</span>, linestyle<span class="op">=</span><span class="st">&quot;--&quot;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>&lt;matplotlib.lines.Line2D object at 0x000001743FB619D0&gt;</code></pre>
+<pre><code>&lt;matplotlib.lines.Line2D object at 0x00000192441CA4D0&gt;</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb155"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb155-1"><a href="#cb155-1" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">&quot;RA/RS&quot;</span>)<span class="op">;</span> ax.set_ylabel(<span class="st">&quot;WPct&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -6337,7 +6337,7 @@ Text(0, 0.5, &#39;WPct&#39;)</code></pre>
 <div class="sourceCode cell-code" id="cb157"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb157-1"><a href="#cb157-1" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="st">&quot;WPct vs RA/RS by Era&quot;</span>)<span class="op">;</span> ax.legend()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Text(0.5, 1.0, &#39;WPct vs RA/RS by Era&#39;)
-&lt;matplotlib.legend.Legend object at 0x000001743FB0B410&gt;</code></pre>
+&lt;matplotlib.legend.Legend object at 0x00000191FC1D5D90&gt;</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb159"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb159-1"><a href="#cb159-1" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()<span class="op">;</span> plt.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
@@ -6442,9 +6442,9 @@ R의 <code>quasibinomial glm</code>(IRLS)과 Python의 <code>WLS</code>(로짓 �
 <span id="cb162-6"><a href="#cb162-6" aria-hidden="true" tabindex="-1"></a>이 숙제의 상세 분석 결과는 아래 링크에서 확인하실 수 있습니다.</span>
 <span id="cb162-7"><a href="#cb162-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb162-8"><a href="#cb162-8" aria-hidden="true" tabindex="-1"></a><span class="ss">* </span><span class="co">[</span><span class="ot">분석 리포트 (HTML)</span><span class="co">](./hw03.html)</span> </span>
-<span id="cb162-9"><a href="#cb162-9" aria-hidden="true" tabindex="-1"></a><span class="ss">* </span><span class="co">[</span><span class="ot">주피터 노트북 (ipynb)</span><span class="co">]</span>(https://mybinder.org/v2/ghcr/&lt;유저명&gt;/my-r-env/latest?filepath=hw03.ipynb</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb162-9"><a href="#cb162-9" aria-hidden="true" tabindex="-1"></a><span class="ss">* </span><span class="co">[</span><span class="ot">주피터 노트북 (ipynb)</span><span class="co">]</span>(https://mybinder.org/v2/ghcr/donghyunlee0306/my-r-env/latest?filepath=hw03.ipynb</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>여기서 <code>&lt;유저명&gt;</code>은 제출자의 GitHub 유저 아이디이다.</p>
+<p>여기서 <code>donghyunlee0306</code>은 제출자의 GitHub 유저 아이디이다.</p>
 <p>작업을 GitHub 원격 저장소로 push한 후 숙제 2 문제 3-3의 3, 4번 과정을 반복하라.</p>
 <section id="답안-6" class="level3">
 <h3 class="anchored" data-anchor-id="답안-6">답안</h3>

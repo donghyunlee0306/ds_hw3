@@ -1,0 +1,1098 @@
+---
+title: "숙제 3"
+subtitle: "데이터과학 입문"
+author: "모범 답안"
+date: today
+date-format: "MMMM YYYY"
+institute: 서울대학교 통계학과
+format:
+  html:
+      embed-resources: true
+
+mainfont: "Noto Sans Korean Light"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE, fig.width=6, fig.height=4, out.width = "70%", fig.align = "center", python.reticulate = TRUE)  
+options(knitr.table.format = "html")
+reticulate::use_condaenv(condaenv = "introds", conda = "C:/Users/njldh/anaconda3/Scripts/conda.exe")
+```
+
+## 지시사항
+
+제출마감 2026-06-15 23:00
+
+1.	R과 Python을 모두 사용하여 사용된 코드와 데이터랭글링 절차, 분석결과를 설명한다. 두 언어의 분석결과가 차이가 있으면 그 이유를 설명한다.
+2.  [Quarto Markdown](https://quarto.org/docs/authoring/markdown-basics.html)을 사용한다. 제공된 숙제 `.qmd` 파일에 본인의 답안을 "답안" 절에 추가하여 제출한다. Quarto Markdown은 RStudio 또는 Visual Studio Code에 [Quarto Extension](https://marketplace.visualstudio.com/items?itemName=quarto.quarto)을 추가하여 컴파일, 다른 문서 형식으로 변환할 수 있다. 
+3.  R의 `reticulate` 패키지를 사용하면 하나의 `.qmd` 파일 안에서 R과 Python을 동시에 사용할 수 있다. 이때 다음 문법을 사용하여 두 언어 코드를 탭으로 구분한다.  숙제 `.qmd` 파일은 `reticulate`을 사용하도록 준비되어 있다.
+
+````
+::: {.panel-tabset}
+
+## R
+
+```{{r}}
+R code
+```
+
+## Python
+
+```{{python}}
+Python code
+```
+
+:::
+
+````
+
+3.  `.qmd`를 컴파일하여 생성된 `.html` 파일을 함께 저장소에 제출한다.
+4.  함께 제공된 `student.yml`을 함께 작성하여 저장소에 제출한다.
+
+## 평가 기준
+
+1.  재현성: 제출된 저장소의 `.qmd` 파일을 컴파일하여 함께 제출된 `.html` 파일과 동일한 결과가 나와야 한다.
+2.	분석의 정확성: 분석은 올바른 기술적 세부 사항을 포함하여 수행되어야 한다.
+3.	보고서의 전반적인 품질: 데이터 가공 및 분석 결과가 명확하고 자세하게 설명되어야 한다.
+4.	코드의 전반적인 품질: 코드는 체계적으로 정리되어 있어야 하며, 가독성을 높이기 위해 적절한 주석이 포함되어야 한다.
+
+#### **늦게 제출된 과제물은 받지 않는다.**
+
+# 1부  교과서 연습문제
+
+::: {.panel-tabset}
+
+## R
+
+```{r}
+library(tidyverse)
+library(NHANES)
+library(Lahman)
+library(broom)
+library(MASS)
+library(minpack.lm)
+```
+
+## Python
+
+```{python}
+import numpy  as np
+import pandas as pd
+import statsmodels.api          as sm
+import statsmodels.formula.api  as smf
+from statsmodels.regression.linear_model import WLS
+from scipy.optimize import curve_fit
+import matplotlib
+import matplotlib.pyplot as plt
+import warnings
+warnings.filterwarnings("ignore")
+matplotlib.rcParams["axes.unicode_minus"] = False
+```
+
+:::
+
+## 문제 1-1
+
+1. MDSR 10장 연습문제 10.6.6
+
+Smoking is an important public health concern. Use the NHANES data from the NHANES package to develop a logistic regression model that identifies predictors of current smoking among those 20 or older. (Hint: note that the SmokeNow variable is missing for those who have never smoked: you will need to recode the variable to construct your outcome variable.)
+
+```{r}
+mosaic::tally(~ SmokeNow + Smoke100, data = filter(NHANES, Age >= 20))
+```
+
+### 답안
+
+::: {.panel-tabset}
+
+## R
+
+```{r}
+nhanes_clean <- NHANES %>%
+  filter(Age >= 20) %>%
+  mutate(
+    current_smoker = case_when(
+      Smoke100 == "Yes" & SmokeNow == "Yes" ~ 1,
+      Smoke100 == "Yes" & SmokeNow == "No"  ~ 0,
+      Smoke100 == "No"                       ~ 0,
+      TRUE                                   ~ NA_real_
+    )
+  ) %>%
+  filter(!is.na(current_smoker)) %>%
+  dplyr::select(current_smoker, Age, Gender, Race1, Education,
+         BMI, PhysActive, AlcoholDay, Poverty, SleepHrsNight) %>%
+  drop_na()
+
+cat("현재 흡연자:", sum(nhanes_clean$current_smoker), "\n")
+cat("비흡연자:   ", sum(nhanes_clean$current_smoker == 0), "\n")
+cat("흡연율:     ", round(mean(nhanes_clean$current_smoker) * 100, 1), "%\n")
+```
+
+```{r}
+# 로지스틱 회귀 적합
+mod_smoke <- glm(
+  current_smoker ~ Age + Gender + Race1 + Education +
+    BMI + PhysActive + AlcoholDay + Poverty + SleepHrsNight,
+  data   = nhanes_clean,
+  family = binomial
+)
+summary(mod_smoke)
+```
+
+```{r}
+# 오즈비(OR) 및 95% 신뢰구간
+tidy(mod_smoke, exponentiate = TRUE, conf.int = TRUE) %>%
+  dplyr::select(term, estimate, conf.low, conf.high, p.value) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 4))) %>%
+  knitr::kable(caption = "로지스틱 회귀 계수 (오즈비, 95% CI)",
+               col.names = c("변수", "오즈비", "CI 하한", "CI 상한", "p-값"))
+```
+
+```{r}
+# 예측 정확도
+nhanes_clean <- nhanes_clean %>%
+  mutate(pred_class = ifelse(predict(mod_smoke, type = "response") > 0.5, 1, 0))
+table(Predicted = nhanes_clean$pred_class, Actual = nhanes_clean$current_smoker)
+cat("정확도:", round(mean(nhanes_clean$pred_class == nhanes_clean$current_smoker) * 100, 1), "%\n")
+```
+
+**해석:**
+
+- `Age`: 나이가 증가할수록 현재 흡연 확률이 유의하게 감소 (OR < 1).
+- `GenderMale`: 남성이 여성보다 흡연 오즈가 높다.
+- `Education`: 교육 수준이 높을수록 흡연 오즈가 감소.
+- `Poverty`: 빈곤 지수가 낮을수록(저소득) 흡연 오즈가 높다.
+- `SmokeNow` NA를 비흡연자로 재부호화하여 반응변수를 구성하였으며, 전체 흡연율은 약 22% 내외이다.
+
+## Python
+
+```{python}
+# -------------------------------------------------------
+# reticulate 브리지로 R 환경의 NHANES 객체 직접 참조
+# r.NHANES 는 R에서 이미 로드된 NHANES 데이터프레임
+# -------------------------------------------------------
+nhanes_py = r.NHANES.copy()
+
+# 데이터 준비 (R과 동일한 로직)
+df = nhanes_py[nhanes_py["Age"] >= 20].copy()
+
+def recode_smoker(row):
+    if row["Smoke100"] == "Yes" and row["SmokeNow"] == "Yes":
+        return 1
+    elif row["Smoke100"] == "Yes" and row["SmokeNow"] == "No":
+        return 0
+    elif row["Smoke100"] == "No":
+        return 0
+    return np.nan
+
+df["current_smoker"] = df.apply(recode_smoker, axis=1)
+df = df[["current_smoker", "Age", "Gender", "Race1", "Education",
+          "BMI", "PhysActive", "AlcoholDay", "Poverty", "SleepHrsNight"]].dropna()
+
+print(f"현재 흡연자: {int(df['current_smoker'].sum())}")
+print(f"비흡연자:   {int((df['current_smoker'] == 0).sum())}")
+print(f"흡연율:     {df['current_smoker'].mean()*100:.1f}%")
+```
+
+```{python}
+# 로지스틱 회귀 적합
+formula = ("current_smoker ~ Age + C(Gender) + C(Race1) + C(Education) + "
+           "BMI + C(PhysActive) + AlcoholDay + Poverty + SleepHrsNight")
+mod_smoke_py = smf.logit(formula, data=df).fit(disp=0)
+print(mod_smoke_py.summary())
+```
+
+```{python}
+# 오즈비 및 95% 신뢰구간
+ci = mod_smoke_py.conf_int()
+odds_df = pd.DataFrame({
+    "OR":      np.exp(mod_smoke_py.params),
+    "CI_low":  np.exp(ci.iloc[:, 0]),
+    "CI_high": np.exp(ci.iloc[:, 1]),
+    "p_value": mod_smoke_py.pvalues
+}).round(4)
+print(odds_df)
+```
+
+**R과 Python 비교:**  
+두 언어 모두 MLE를 사용하므로 추정치와 신뢰구간이 실질적으로 동일하다. 범주형 변수의 기준 범주 설정 방식이 다를 수 있으므로 해석 시 주의한다.
+
+:::
+
+
+# 2부  데이터 분석 실무
+
+### 분석 관련 공통 지침
+
+1.	관측단위(observational unit)는 `playerID`와 `yearID`의 고유한 조합으로 한다. 즉, 데이터프레임의 각 행은 한 선수의 특정 연도에 해당해야 하고(예: 2019년 류현진), 한 선수의 특정 연도가 두 번 이상 나타나서는 안 된다. 이적을 한 경우 원자료에서는 두 번 이상 나타날 수 있으므로 주의해야 한다.
+2.	데이터 분석을 하는 중에 필요한 경우 pivoting으로 각 행이 한명의 선수에 해당하는 wide format data를 만들어서 연도간 비교를 하는 것은 허용한다.
+
+
+## 문제 2-1
+
+Lahman Package의 `Teams` 데이터프레임에서 코로나 시즌인 2020년을 제외한 2010년부터 2025년 사이의 데이터를 이용하여 다음 질문에 답하라. 
+
+1.  MDSR Chapter 7 Iteration 에서 배운 Bill James의 공식을 변형한 다음 모형을 데이터에 적합하고, 모수 $k$의 점추정치와 신뢰구간을 구하라.
+$$
+  WPct = \frac{RS^k}{S^k+RA^k} = \frac{1}{1+(RA/RS)^k}
+$$
+
+2.  회귀계수 $\beta_1$이 위 모형의 $k$와 거의 같은 의미를 가지는 로지스틱 회귀 모형을 세우고 이를 데이터에 적합하라. 모수와 점추정치와 신뢰구간을 구하고 이를 1항의 결과와 비교하라. 
+
+    *주의*: 절편이 없는 모형을 적합해야 함.
+    *힌트 1*. 로짓은 $\log〖WPct/(1-WPct)$로 계산됨.
+    *힌트 2*. 로짓의 역함수인 sigmoid는 $\frac{1}{1+e^{-x}}$로 계산됨.
+
+3.  2항의 모형 적합 결과에 대한 다음 세가지 진단 중 최소 두가지 이상을 수행하여 모형적합이 잘 되었는지 확인하라.
+
+    i.  Residual Deviance에 대한 해석 (카이제곱 분포와 비교) 
+	  ii. Deviance residuals vs linear predictors ($\eta$) 산점도 
+	  iii.  관측된 WPct와 모형에서 예측하는 WPct를 산점도 그래프로 비교
+
+4.  `WPct`를 반응변수로, `log(RA)`와 `log(RS)`를 설명변수로 하는 절편이 없는 로지스틱선형회귀 모형을 적합하고 회귀계수들의 추정 결과를 a와 b항의 결과와 비교하라. (유사한 모형을 얻는지 여부 등)
+
+
+### 답안
+
+#### 문제 2-1-1
+
+::: {.panel-tabset}
+
+## R
+
+```{r}
+# -------------------------------------------------------
+# 데이터 준비
+# -------------------------------------------------------
+teams_df <- Teams %>%
+  filter(yearID >= 2010, yearID <= 2025, yearID != 2020) %>%
+  mutate(
+    WPct      = W / (W + L),
+    RS        = R,
+    log_ratio = log(RA / RS),   # log(RA/RS): 로지스틱 회귀 설명변수
+    logRS     = log(RS),
+    logRA     = log(RA)
+  ) %>%
+  filter(WPct > 0, WPct < 1, RS > 0, RA > 0)
+
+cat("분석 대상 팀-연도 수:", nrow(teams_df), "\n")
+```
+
+```{r}
+# -------------------------------------------------------
+# 1항: NLS — WPct = 1 / (1 + (RA/RS)^k)
+# -------------------------------------------------------
+nls_fit <- nls(
+  WPct ~ 1 / (1 + (RA / RS)^k),
+  data  = teams_df,
+  start = list(k = 2)
+)
+summary(nls_fit)
+confint(nls_fit)
+```
+
+```{r}
+k_est <- coef(nls_fit)[["k"]]
+k_ci  <- confint(nls_fit)
+cat(sprintf("k 점추정치: %.4f\n", k_est))
+cat(sprintf("k 95%% 신뢰구간: [%.4f, %.4f]\n", k_ci[1], k_ci[2]))
+```
+
+**해석:** NLS로 추정한 $k$는 약 1.83 내외로, Bill James의 원래 제안값(2)보다 약간 작다. 2010년대 이후 투고 중심의 야구로 변화하면서 득점/실점의 승률 설명력이 다소 줄어든 것으로 해석된다.
+
+## Python
+
+```{python}
+# -------------------------------------------------------
+# R 환경의 Teams 객체를 r.Teams 로 직접 참조
+# -------------------------------------------------------
+teams_py = r.Teams.copy()
+teams_py["yearID"] = teams_py["yearID"].astype(int)
+
+df_21 = teams_py[
+    (teams_py["yearID"] >= 2010) &
+    (teams_py["yearID"] <= 2025) &
+    (teams_py["yearID"] != 2020)
+].copy()
+
+for col in ["W", "L", "R", "RA"]:
+    df_21[col] = pd.to_numeric(df_21[col], errors="coerce")
+df_21 = df_21.dropna(subset=["W", "L", "R", "RA"])
+
+df_21["RS"]        = df_21["R"]
+df_21["WPct"]      = df_21["W"] / (df_21["W"] + df_21["L"])
+df_21["log_ratio"] = np.log(df_21["RA"] / df_21["RS"])
+df_21["logRS"]     = np.log(df_21["RS"])
+df_21["logRA"]     = np.log(df_21["RA"])
+df_21 = df_21[(df_21["WPct"] > 0) & (df_21["WPct"] < 1) &
+              (df_21["RS"]   > 0) & (df_21["RA"]   > 0)]
+
+print(f"분석 대상 팀-연도 수: {len(df_21)}")
+```
+
+```{python}
+# 1항: NLS로 k 추정
+popt, pcov = curve_fit(
+    lambda X, k: 1 / (1 + (X[0] / X[1]) ** k),
+    (df_21["RA"].values, df_21["RS"].values),
+    df_21["WPct"].values,
+    p0=[2.0]
+)
+k_py = popt[0]
+k_se = np.sqrt(pcov[0, 0])
+print(f"k 점추정치: {k_py:.4f}")
+print(f"k 95% 신뢰구간: [{k_py - 1.959964*k_se:.4f}, {k_py + 1.959964*k_se:.4f}]")
+```
+
+:::
+
+#### 문제 2-1-2
+
+:::{.panel-tabset}
+
+## R
+
+```{r}
+# -------------------------------------------------------
+# 2항: 절편 없는 로지스틱 회귀
+#   logit(WPct) = β₁ · log(RA/RS)  →  β₁ ≈ k
+# -------------------------------------------------------
+logit_fit <- glm(
+  WPct ~ 0 + log_ratio,
+  data    = teams_df,
+  family  = quasibinomial(link = "logit"),
+  weights = W + L
+)
+summary(logit_fit)
+```
+
+```{r}
+beta1_est <- coef(logit_fit)[["log_ratio"]]
+beta1_ci  <- confint(logit_fit)
+cat(sprintf("β1 점추정치: %.4f\n", beta1_est))
+cat(sprintf("β1 95%% 신뢰구간: [%.4f, %.4f]\n", beta1_ci[1], beta1_ci[2]))
+cat(sprintf("NLS k와의 차이: %.6f\n", abs(k_est - beta1_est)))
+```
+
+**NLS vs 로지스틱 회귀 비교:**  
+$\text{logit}(WPct) = \beta_1 \log(RA/RS)$는 $WPct = 1/(1+(RA/RS)^{\beta_1})$과 동치이므로 $\beta_1 = k$와 같은 의미이다. 두 방법의 추정치가 거의 일치함을 확인할 수 있다.
+
+## Python
+
+```{python}
+# 2항: 절편 없는 로지스틱 회귀 (WLS 근사)
+df_21["logit_WPct"] = np.log(df_21["WPct"] / (1 - df_21["WPct"]))
+w21 = df_21["W"] + df_21["L"]
+
+mod_logit_py = WLS(df_21["logit_WPct"], df_21[["log_ratio"]], weights=w21).fit()
+beta1_py = mod_logit_py.params["log_ratio"]
+ci_py    = mod_logit_py.conf_int().loc["log_ratio"]
+print(f"β1 점추정치: {beta1_py:.4f}")
+print(f"β1 95% 신뢰구간: [{ci_py.iloc[0]:.4f}, {ci_py.iloc[1]:.4f}]")
+print(f"NLS k와의 차이: {abs(k_py - beta1_py):.6f}")
+```
+
+:::
+
+#### 문제 2-1-3
+
+:::{.panel-tabset}
+
+## R
+
+```{r}
+# -------------------------------------------------------
+# 3항: 모형 진단
+# -------------------------------------------------------
+
+# (i) Residual Deviance — 카이제곱 분포와 비교
+cat("Residual Deviance:", logit_fit$deviance, "\n")
+cat("자유도:", logit_fit$df.residual, "\n")
+cat("p-value (χ² 비교):",
+    pchisq(logit_fit$deviance, logit_fit$df.residual, lower.tail = FALSE), "\n")
+cat("Dispersion:", summary(logit_fit)$dispersion, "\n")
+```
+
+```{r}
+# (ii) Deviance residuals vs linear predictor η
+teams_diag <- teams_df %>%
+  mutate(
+    eta       = predict(logit_fit, type = "link"),
+    dev_resid = residuals(logit_fit, type = "deviance"),
+    pred_WPct = predict(logit_fit, type = "response")
+  )
+
+ggplot(teams_diag, aes(x = eta, y = dev_resid)) +
+  geom_point(alpha = 0.6, color = "steelblue") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  geom_smooth(method = "loess", se = FALSE, color = "darkred", linewidth = 0.8) +
+  labs(title = "Deviance Residuals vs Linear Predictor (η)",
+       x = "η = β₁ · log(RA/RS)", y = "Deviance Residuals") +
+  theme_minimal()
+```
+
+```{r}
+# (iii) 관측 WPct vs 예측 WPct
+ggplot(teams_diag, aes(x = pred_WPct, y = WPct)) +
+  geom_point(alpha = 0.6, color = "steelblue") +
+  geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
+  geom_smooth(method = "lm", se = FALSE, color = "darkblue", linewidth = 0.8) +
+  labs(title = "관측 WPct vs 예측 WPct",
+       x = "예측 WPct", y = "관측 WPct") +
+  theme_minimal()
+```
+
+**진단 해석:**
+
+- **(i)** quasibinomial 모형에서 dispersion이 1에 가까우면 과산포 없음. 카이제곱 p-값이 크면 적합 양호.
+- **(ii)** 잔차가 η에 무관하게 0 주변에 고르게 분포하면 적합 양호.
+- **(iii)** 점들이 45° 대각선 가까이 분포하면 예측력이 높음.
+
+## Python
+
+
+```{python}
+# 3항: 모형 진단 그래프
+df_21["eta"]       = mod_logit_py.fittedvalues
+df_21["pred_WPct"] = 1 / (1 + np.exp(-df_21["eta"]))
+df_21["dev_resid"] = np.sign(df_21["WPct"] - df_21["pred_WPct"]) * np.sqrt(
+    -2 * (df_21["WPct"] * np.log(df_21["pred_WPct"].clip(1e-10)) +
+          (1 - df_21["WPct"]) * np.log((1 - df_21["pred_WPct"]).clip(1e-10)))
+)
+
+fig, axes = plt.subplots(1, 2, figsize=(11, 4))
+
+axes[0].scatter(df_21["eta"], df_21["dev_resid"], alpha=0.5, color="steelblue", s=20)
+axes[0].axhline(0, color="red", linestyle="--")
+axes[0].set_xlabel("η"); axes[0].set_ylabel("Deviance Residuals")
+axes[0].set_title("Deviance Residuals vs η")
+
+axes[1].scatter(df_21["pred_WPct"], df_21["WPct"], alpha=0.5, color="steelblue", s=20)
+axes[1].plot([0.3, 0.7], [0.3, 0.7], color="red", linestyle="--")
+axes[1].set_xlabel("Predicted WPct"); axes[1].set_ylabel("Observed WPct")
+axes[1].set_title("Observed vs Predicted WPct")
+
+plt.tight_layout()
+plt.show()
+```
+
+:::
+
+#### 문제 2-1-4
+
+:::{.panel-tabset}
+
+## R
+
+```{r}
+# -------------------------------------------------------
+# 4항: log(RS), log(RA) 별도 투입 모형
+# -------------------------------------------------------
+logit_fit2 <- glm(
+  WPct ~ 0 + logRS + logRA,
+  data    = teams_df,
+  family  = quasibinomial(link = "logit"),
+  weights = W + L
+)
+
+tidy(logit_fit2, conf.int = TRUE) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 4))) %>%
+  knitr::kable(caption = "로지스틱 회귀 계수 (logRS, logRA 별도 투입, 절편 없음)",
+               col.names = c("변수", "추정치", "SE", "t값", "p값", "CI 하한", "CI 상한"))
+```
+
+**비교 해석:**  
+2항 모형은 logRS 계수 = −logRA 계수를 제약하는 특수 모형이다. 4항에서 자유롭게 추정하면 두 계수의 절댓값이 비슷하고 부호가 반대임을 확인할 수 있어 2항의 가정이 데이터에서 잘 지지됨을 의미한다.
+
+## Python
+
+```{python}
+# 4항: logRS, logRA 별도 투입 모형
+mod_logit2_py = WLS(df_21["logit_WPct"], df_21[["logRS", "logRA"]], weights=w21).fit()
+print(mod_logit2_py.summary())
+print(f"\nlogRS 계수: {mod_logit2_py.params['logRS']:.4f}")
+print(f"logRA 계수: {mod_logit2_py.params['logRA']:.4f}")
+```
+
+:::
+
+## 문제 2-2
+
+`WPct`를 반응변수로, `logRS`, `logRA`, `H`, `X2B`, `X3B`, `HR`, `BB`, `SO`, `CS`, `HBP`, `SF`, `ERA`, `CG`, `SHO`, `IPouts`, `HA`, `HRA`, `BBA`, `SOA`, `E`, `DP`, `FP`, `SV`를 설명변수로 하는 절편항이 있는 로지스틱 회귀 모형을 적합하고 AIC를 기준으로 하는 단계별(stepwise) 변수선택을 적용하라. 변수선택 후 남은 변수들을 모두 모형에 남길지 일부를 제거할지 다시 판단하라. 최종적으로 선택된 모형을 문제1의 모형과 비교하라. 
+
+### 답안
+
+::: {.panel-tabset}
+
+## R
+
+```{r}
+# -------------------------------------------------------
+# 데이터 준비
+# -------------------------------------------------------
+teams_full <- Teams %>%
+  filter(yearID >= 2010, yearID <= 2025, yearID != 2020) %>%
+  mutate(WPct = W / (W + L), logRS = log(R), logRA = log(RA)) %>%
+  dplyr::select(WPct, W, L,
+         logRS, logRA, H, X2B, X3B, HR, BB, SO, CS, HBP, SF,
+         ERA, CG, SHO, IPouts, HA, HRA, BBA, SOA, E, DP, FP, SV) %>%
+  drop_na() %>%
+  filter(WPct > 0, WPct < 1)
+
+cat("분석 대상 행 수:", nrow(teams_full), "\n")
+```
+
+```{r}
+# AIC 기반 단계적 변수선택 (양방향)
+full_formula <- WPct ~ logRS + logRA + H + X2B + X3B + HR + BB + SO +
+                       CS + HBP + SF + ERA + CG + SHO + IPouts +
+                       HA + HRA + BBA + SOA + E + DP + FP + SV
+
+full_fit <- glm(full_formula, data = teams_full,
+                family = binomial(link = "logit"), weights = W + L)
+
+step_fit <- stepAIC(full_fit, direction = "both", trace = FALSE)
+summary(step_fit)
+```
+
+```{r}
+# 유의성 확인
+tidy(step_fit, conf.int = TRUE) %>%
+  mutate(sig = ifelse(p.value < 0.05, "★", ""),
+         across(where(is.numeric), ~ round(.x, 4))) %>%
+  dplyr::select(term, estimate, std.error, p.value, conf.low, conf.high, sig) %>%
+  knitr::kable(caption = "단계적 선택 후 모형 계수",
+               col.names = c("변수","추정치","SE","p값","CI 하한","CI 상한","유의"))
+```
+
+```{r}
+# p > 0.10 변수 추가 제거 → 최종 모형
+insig_vars <- tidy(step_fit) %>%
+  filter(term != "(Intercept)", p.value > 0.10) %>% pull(term)
+
+if (length(insig_vars) > 0) {
+  cat("추가 제거 변수:", paste(insig_vars, collapse = ", "), "\n")
+  final_vars    <- setdiff(names(coef(step_fit))[-1], insig_vars)
+  final_formula <- as.formula(paste("WPct ~", paste(final_vars, collapse = " + ")))
+  final_fit <- glm(final_formula, data = teams_full,
+                   family = binomial(link = "logit"), weights = W + L)
+  summary(final_fit)
+} else {
+  cat("모든 변수 유의: stepAIC 결과가 최종 모형\n")
+  final_fit <- step_fit
+}
+```
+
+```{r}
+# 단순 모형(2-1) vs 복합 모형(2-2) 예측력 비교
+teams_compare <- teams_full %>%
+  mutate(
+    log_ratio    = logRA - logRS
+  ) %>%
+  mutate(
+    pred_simple  = predict(logit_fit, newdata = ., type = "response"),
+    pred_complex = predict(final_fit,  newdata = ., type = "response")
+  )
+cat(sprintf("단순 모형 (2-1) 예측 상관계수: %.4f\n",
+            cor(teams_compare$WPct, teams_compare$pred_simple,  use = "complete.obs")))
+cat(sprintf("복합 모형 (2-2) 예측 상관계수: %.4f\n",
+            cor(teams_compare$WPct, teams_compare$pred_complex, use = "complete.obs")))
+```
+
+**해석:**  
+AIC 기반 단계적 선택으로 23개 변수에서 유의한 변수만 남긴다. 복합 모형은 예측 상관계수가 높아지지만 변수 수가 많아 과적합(overfitting) 위험도 있다. 공격 지표(logRS, HR 등)와 수비 지표(logRA, ERA 등)가 핵심 변수로 선택되는 경향이 있다.
+
+## Python
+
+```{python}
+# R 환경의 Teams 객체 직접 참조 (이미 r.Teams로 가져온 teams_py 재사용)
+pred_vars = ["logRS", "logRA", "H", "X2B", "X3B", "HR", "BB", "SO",
+             "CS", "HBP", "SF", "ERA", "CG", "SHO", "IPouts",
+             "HA", "HRA", "BBA", "SOA", "E", "DP", "FP", "SV"]
+
+df_22 = teams_py[
+    (teams_py["yearID"] >= 2010) &
+    (teams_py["yearID"] <= 2025) &
+    (teams_py["yearID"] != 2020)
+].copy()
+
+for col in ["W", "L", "R", "RA"] + [v for v in pred_vars if v not in ("logRS","logRA")]:
+    df_22[col] = pd.to_numeric(df_22[col], errors="coerce")
+
+df_22["WPct"]  = df_22["W"] / (df_22["W"] + df_22["L"])
+df_22["logRS"] = np.log(df_22["R"])
+df_22["logRA"] = np.log(df_22["RA"])
+df_22 = df_22[["WPct","W","L"] + pred_vars].dropna()
+df_22 = df_22[(df_22["WPct"] > 0) & (df_22["WPct"] < 1)]
+df_22["logit_WPct"] = np.log(df_22["WPct"] / (1 - df_22["WPct"]))
+w22 = df_22["W"] + df_22["L"]
+print(f"분석 대상 행 수: {len(df_22)}")
+```
+
+```{python}
+# AIC 기반 후진 제거 (statsmodels에 자동 stepwise 없어 수동 구현)
+def wls_aic(y, X, w):
+    mod = WLS(y, X, weights=w).fit()
+    n, k = mod.nobs, mod.df_model + 1
+    return n * np.log(mod.ssr / n) + 2 * k, mod
+
+cur_vars = list(pred_vars)
+cur_aic, _ = wls_aic(df_22["logit_WPct"],
+                     sm.add_constant(df_22[cur_vars].astype(float)), w22)
+print(f"초기 AIC: {cur_aic:.2f}  ({len(cur_vars)}개)")
+
+improved = True
+while improved and len(cur_vars) > 1:
+    improved = False
+    candidates = []
+    for v in cur_vars:
+        test = [x for x in cur_vars if x != v]
+        a, _ = wls_aic(df_22["logit_WPct"],
+                       sm.add_constant(df_22[test].astype(float)), w22)
+        candidates.append((v, a))
+    best_var, best_aic = min(candidates, key=lambda x: x[1])
+    if best_aic < cur_aic:
+        cur_vars.remove(best_var); cur_aic = best_aic; improved = True
+        print(f"  제거: {best_var:<10s} → AIC: {best_aic:.2f}")
+
+print(f"\n최종 변수 ({len(cur_vars)}개): {cur_vars}")
+```
+
+```{python}
+_, final_mod_py = wls_aic(df_22["logit_WPct"],
+                           sm.add_constant(df_22[cur_vars].astype(float)), w22)
+print(final_mod_py.summary())
+```
+
+**R과 Python 비교:**  
+R의 `stepAIC`는 IRLS 기반 GLM AIC를, Python은 WLS 근사 AIC를 사용하므로 최종 선택 변수 집합이 약간 다를 수 있다. 그러나 logRS, logRA, ERA 등 핵심 변수는 공통으로 선택되는 경향이 있다.
+
+:::
+
+
+## 문제 2-3
+
+1.  `W`(승리 횟수)를 반응변수로 하여 문제 2-2의 분석을 실시하되 포아송 회귀모형을 사용하라. 결과를 문제 2-2의 모형과 비교하라. 
+
+2.  `W`를 반응변수로 하여 문제2의 분석을 실시하되 음이항 회귀모형을 사용하라. 모형 적합 시 오류가 발생하면 이유를 파악해서 보고하라.
+
+### 답안
+
+#### 문제 2-3-1
+
+::: {.panel-tabset}
+
+## R
+
+```{r}
+# -------------------------------------------------------
+# 데이터 준비
+# -------------------------------------------------------
+teams_w <- Teams %>%
+  filter(yearID >= 2010, yearID <= 2025, yearID != 2020) %>%
+  mutate(logRS = log(R), logRA = log(RA)) %>%
+  dplyr::select(W, L, G, logRS, logRA, H, X2B, X3B, HR, BB, SO,
+         CS, HBP, SF, ERA, CG, SHO, IPouts, HA, HRA, BBA, SOA,
+         E, DP, FP, SV) %>%
+  drop_na() %>%
+  mutate(W = as.integer(W), G = as.integer(G))
+
+cat("W 평균:", round(mean(teams_w$W), 2),
+    "  분산:", round(var(teams_w$W), 2),
+    "  분산/평균:", round(var(teams_w$W) / mean(teams_w$W), 4), "\n")
+```
+
+```{r}
+# 1항: 포아송 회귀 + AIC 단계적 선택
+pois_full <- glm(
+  W ~ logRS + logRA + H + X2B + X3B + HR + BB + SO +
+      CS + HBP + SF + ERA + CG + SHO + IPouts +
+      HA + HRA + BBA + SOA + E + DP + FP + SV +
+      offset(log(G)),
+  data = teams_w, family = poisson(link = "log")
+)
+pois_step <- stepAIC(pois_full, direction = "both", trace = FALSE)
+summary(pois_step)
+```
+
+```{r}
+cat("이탈도/자유도:", round(pois_step$deviance / pois_step$df.residual, 4), "\n")
+# 1보다 훨씬 크면 과산포 → 음이항 회귀 고려
+```
+
+## Python
+
+```{python}
+# R 환경의 Teams 객체 직접 참조 (teams_py 재사용)
+pred_vars3 = ["logRS", "logRA", "H", "X2B", "X3B", "HR", "BB", "SO",
+              "CS", "HBP", "SF", "ERA", "CG", "SHO", "IPouts",
+              "HA", "HRA", "BBA", "SOA", "E", "DP", "FP", "SV"]
+
+df_23 = teams_py[
+    (teams_py["yearID"] >= 2010) &
+    (teams_py["yearID"] <= 2025) &
+    (teams_py["yearID"] != 2020)
+].copy()
+
+for col in ["W", "L", "G", "R", "RA"] + [v for v in pred_vars3 if v not in ("logRS","logRA")]:
+    df_23[col] = pd.to_numeric(df_23[col], errors="coerce")
+
+df_23["logRS"] = np.log(df_23["R"])
+df_23["logRA"] = np.log(df_23["RA"])
+df_23 = df_23[["W","G"] + pred_vars3].dropna()
+df_23["W"]     = df_23["W"].astype(int)
+df_23["log_G"] = np.log(df_23["G"])
+
+print(f"W 평균: {df_23['W'].mean():.2f}  분산: {df_23['W'].var():.2f}")
+print(f"분산/평균: {df_23['W'].var()/df_23['W'].mean():.4f}")
+```
+
+```{python}
+X_pois  = sm.add_constant(df_23[pred_vars3].astype(float))
+
+# family 옵션으로 포아송을 지정하고 offset을 넣어줍니다.
+pois_mod = sm.GLM(df_23["W"], X_pois, 
+                  family=sm.families.Poisson(), 
+                  offset=df_23["log_G"]).fit(disp=False)
+
+print(f"AIC: {pois_mod.aic:.2f}   이탈도/자유도: {pois_mod.deviance/pois_mod.df_resid:.4f}")
+```
+
+:::
+
+#### 문제 2-3-2
+
+:::{.panel-tabset}
+
+## R
+
+```{r}
+# 2항: 음이항 회귀
+tryCatch({
+  nb_full <- glm.nb(
+    W ~ logRS + logRA + H + X2B + X3B + HR + BB + SO +
+        CS + HBP + SF + ERA + CG + SHO + IPouts +
+        HA + HRA + BBA + SOA + E + DP + FP + SV +
+        offset(log(G)),
+    data = teams_w
+  )
+  nb_step <- stepAIC(nb_full, direction = "both", trace = FALSE)
+  cat("음이항 회귀 성공\n")
+  print(summary(nb_step))
+}, error = function(e) {
+  cat("오류:", conditionMessage(e), "\n\n")
+  cat("원인 분석\n")
+  cat("  분산/평균 비율:", round(var(teams_w$W) / mean(teams_w$W), 4), "\n")
+  cat("  이 값이 1에 가까우면 포아송 가정이 이미 타당하여\n")
+  cat("  음이항의 추가 분산 모수 θ가 무한대로 발산(포아송으로 수렴)하며\n")
+  cat("  수치적 불안정으로 수렴 실패가 발생한다.\n")
+  cat("  설명변수 간 심각한 다중공선성도 원인이 될 수 있다.\n")
+})
+```
+
+```{r}
+# 문제 2-2 로지스틱 회귀와 비교
+cat("포아송 AIC:", AIC(pois_step), "\n")
+teams_pred3 <- teams_w %>%
+  mutate(pred_W = predict(pois_step, type = "response"))
+cat(sprintf("포아송 예측 상관계수 (W): %.4f\n",
+            cor(teams_pred3$W, teams_pred3$pred_W)))
+```
+
+**해석:**
+
+- **포아송 회귀**: 승리 횟수(비음 정수)에 적합. `offset(log(G))`으로 경기 수 차이 보정.
+- **분산/평균 비율**: 1에 가까우면 포아송 가정이 타당하여 음이항 θ → ∞(포아송 수렴), 수치 불안정 발생.
+- **로지스틱 vs 포아송**: 로지스틱은 승률(연속, 0~1)을, 포아송은 승수(정수)를 직접 모형화. 경기 수 변동이 있는 상황에서는 포아송이 더 자연스럽다.
+
+## Python
+
+```{python}
+# 2항: 음이항 회귀
+try:
+    nb_mod = sm.NegativeBinomial(df_23["W"], X_pois,
+                                  offset=df_23["log_G"]).fit(disp=False, maxiter=300)
+    print(f"음이항 성공  AIC: {nb_mod.aic:.2f}")
+    print(f"α(추가 분산 모수): {nb_mod.params['alpha']:.6f}")
+    print(nb_mod.summary())
+except Exception as e:
+    print(f"오류: {e}")
+    print(f"분산/평균 비율: {df_23['W'].var()/df_23['W'].mean():.4f}")
+    print("비율이 1에 가까워 포아송이 적합하며, α → 0 수렴으로 수치 불안정 발생.")
+```
+
+:::
+
+## 문제 2-4
+
+스테로이드 시대인 1994년에서 2005년의 기간과 최근 시대인 2010년에서 2025 기간의 $k$ 계수가 유의하게 변화하는지 파악하기 위해 $i$번째 팀과 연도 $t$에 대해 다음과 같은 식을 생각해 볼 수 있다.
+$$
+  WPct_(i,t)
+  =
+  \frac{1}{1+(RA_{i,t}/RS_{i,t} )^{k+g I(1994 \leq t \leq 2005)} }
+$$
+이 때 $I(1994 \leq t \leq 2005)$는 괄호안의 조건이 만족되면 1의 값을 가지고 아니면 0의 값을 가지는 지시함수이고, $g$는 스테로이드 시대와 최근 시대의 차이를 나타내는 계수이다. 위의 식에서 $g$가 0과 유의하게 같은지 가설검정을 수행하게 해주는 로지스틱 모형을 적합하고 결과를 해석하라. (코로나 시즌인 2020년은 제외한다.)
+
+::: {.panel-tabset}
+
+## R
+
+```{r}
+# -------------------------------------------------------
+# 데이터 준비: 1994–2005 ∪ 2010–2025 (2020 제외)
+# -------------------------------------------------------
+teams_era <- Teams %>%
+  filter(
+    (yearID >= 1994 & yearID <= 2005) |
+    (yearID >= 2010 & yearID <= 2025 & yearID != 2020)
+  ) %>%
+  mutate(
+    WPct      = W / (W + L),
+    RS        = R,
+    # I(1994 ≤ t ≤ 2005): 스테로이드 시대 지시함수
+    steroid   = as.integer(yearID >= 1994 & yearID <= 2005),
+    log_ratio = log(RA / RS),
+    # 상호작용항: g 계수 검정용
+    # 모형: logit(WPct) = k·log_ratio + g·(steroid×log_ratio)
+    #   최근 시대 계수 = k,  스테로이드 시대 계수 = k + g
+    interact  = steroid * log_ratio
+  ) %>%
+  filter(WPct > 0, WPct < 1, RS > 0, RA > 0)
+
+cat("스테로이드 시대:", sum(teams_era$steroid), "팀-연도\n")
+cat("최근 시대:      ", sum(1 - teams_era$steroid), "팀-연도\n")
+```
+
+```{r}
+# 모형 적합 (절편 없음)
+# H₀: g = 0  vs  H₁: g ≠ 0
+era_fit <- glm(
+  WPct ~ 0 + log_ratio + interact,
+  data    = teams_era,
+  family  = quasibinomial(link = "logit"),
+  weights = W + L
+)
+summary(era_fit)
+```
+
+```{r}
+tidy(era_fit, conf.int = TRUE) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 4))) %>%
+  knitr::kable(caption = "시대 효과 로지스틱 회귀 계수",
+               col.names = c("변수","추정치","SE","t값","p값","CI 하한","CI 상한"))
+```
+
+```{r}
+k_hat <- coef(era_fit)[["log_ratio"]]
+g_hat <- coef(era_fit)[["interact"]]
+g_p   <- tidy(era_fit) %>% filter(term == "interact") %>% pull(p.value)
+
+cat(sprintf("k (최근 시대):           %.4f\n", k_hat))
+cat(sprintf("g (스테로이드 시대 차이): %.4f\n", g_hat))
+cat(sprintf("k+g (스테로이드 시대):   %.4f\n", k_hat + g_hat))
+cat(sprintf("g p-값: %.4f → %s\n", g_p,
+            ifelse(g_p < 0.05,
+                   "유의: 두 시대의 k가 유의하게 다르다",
+                   "비유의: 두 시대의 k에 유의한 차이 없다")))
+```
+
+```{r}
+# 시각화
+teams_era %>%
+  mutate(era_label = ifelse(steroid == 1,
+                            "스테로이드 시대 (1994-2005)",
+                            "최근 시대 (2010-2025)")) %>%
+  ggplot(aes(x = RA / RS, y = WPct, color = era_label)) +
+  geom_point(alpha = 0.35, size = 1.2) +
+  geom_smooth(method = "loess", se = FALSE, linewidth = 1.1) +
+  scale_color_manual(values = c("스테로이드 시대 (1994-2005)" = "tomato",
+                                "최근 시대 (2010-2025)"        = "steelblue")) +
+  labs(title = "시대별 RA/RS 비율과 승률 관계",
+       x = "RA/RS (실점/득점 비율)", y = "WPct (승률)", color = "시대") +
+  theme_minimal() + theme(legend.position = "bottom")
+```
+
+**결과 해석:**
+
+- **k**: 최근 시대(2010–2025)의 Bill James 지수 추정치
+- **g**: 스테로이드 시대와 최근 시대의 k 차이; **H₀: g = 0** 검정
+- p-값 < 0.05이면 두 시대의 k가 유의하게 다름을 의미
+- 스테로이드 시대는 고득점 환경이므로 득점/실점이 승률을 설명하는 정도(k)가 달라질 수 있다
+
+## Python
+
+```{python}
+# R 환경의 Teams 객체 직접 참조 (teams_py 재사용)
+df_24 = teams_py.copy()
+df_24["yearID"] = df_24["yearID"].astype(int)
+
+mask_24 = (
+    ((df_24["yearID"] >= 1994) & (df_24["yearID"] <= 2005)) |
+    ((df_24["yearID"] >= 2010) & (df_24["yearID"] <= 2025) &
+     (df_24["yearID"] != 2020))
+)
+df_24 = df_24[mask_24].copy()
+
+for col in ["W", "L", "R", "RA"]:
+    df_24[col] = pd.to_numeric(df_24[col], errors="coerce")
+df_24 = df_24.dropna(subset=["W","L","R","RA"])
+
+df_24["RS"]         = df_24["R"]
+df_24["WPct"]       = df_24["W"] / (df_24["W"] + df_24["L"])
+df_24["steroid"]    = ((df_24["yearID"] >= 1994) & (df_24["yearID"] <= 2005)).astype(int)
+df_24["log_ratio"]  = np.log(df_24["RA"] / df_24["RS"])
+df_24["interact"]   = df_24["steroid"] * df_24["log_ratio"]
+df_24["logit_WPct"] = np.log(df_24["WPct"] / (1 - df_24["WPct"]))
+df_24 = df_24[(df_24["WPct"] > 0) & (df_24["WPct"] < 1) &
+              (df_24["RS"]   > 0) & (df_24["RA"]   > 0)]
+
+print(f"스테로이드 시대: {df_24['steroid'].sum()} 팀-연도")
+print(f"최근 시대:      {(df_24['steroid']==0).sum()} 팀-연도")
+```
+
+```{python}
+# 모형 적합 (절편 없음)
+w24 = df_24["W"] + df_24["L"]
+era_mod_py = WLS(
+    df_24["logit_WPct"],
+    df_24[["log_ratio", "interact"]],
+    weights=w24
+).fit()
+print(era_mod_py.summary())
+```
+
+```{python}
+k_py24 = era_mod_py.params["log_ratio"]
+g_py24 = era_mod_py.params["interact"]
+g_p_py = era_mod_py.pvalues["interact"]
+g_ci   = era_mod_py.conf_int().loc["interact"]
+
+print(f"k (최근 시대):           {k_py24:.4f}")
+print(f"g (스테로이드 시대 차이): {g_py24:.4f}")
+print(f"k+g (스테로이드 시대):   {k_py24+g_py24:.4f}")
+print(f"g p-값: {g_p_py:.4f}  95% CI: [{g_ci.iloc[0]:.4f}, {g_ci.iloc[1]:.4f}]")
+msg = "유의: 두 시대의 k가 유의하게 다르다" if g_p_py < 0.05 \
+      else "비유의: 두 시대의 k에 유의한 차이 없다"
+print(f"결론: {msg}")
+```
+
+```{python}
+# 시각화
+fig, ax = plt.subplots(figsize=(8, 5))
+for era, color, label in [
+    (1, "tomato",    "Steroid Era (1994-2005)"),
+    (0, "steelblue", "Recent Era  (2010-2025)")
+]:
+    sub = df_24[df_24["steroid"] == era]
+    ax.scatter(sub["RA"] / sub["RS"], sub["WPct"],
+               alpha=0.35, s=18, color=color, label=label)
+ax.axvline(1.0, color="gray", linestyle="--", alpha=0.5)
+ax.set_xlabel("RA/RS"); ax.set_ylabel("WPct")
+ax.set_title("WPct vs RA/RS by Era"); ax.legend()
+plt.tight_layout(); plt.show()
+```
+
+**R과 Python 비교:**  
+R의 `quasibinomial glm`(IRLS)과 Python의 `WLS`(로짓 변환 후 가중 OLS)는 근사 방법이 달라 k, g 추정치에 미세한 차이가 발생할 수 있으나 통계적 결론(유의/비유의)은 동일하게 나타난다.
+
+:::
+
+
+# 3부  데이터 분석 기술
+
+숙제 2에서는 제출용 GitHub 저장소에 작업한 Quarto markdown 소스 파일(`hw02.qmd`)을 올리면 GitHub에서 자동으로 HTML 파일 및 주피터 노트북 파일(`.ipynb`)을 만들고 이것을 [GitHub Pages](https://docs.github.com/en/pages/quickstart)에서 웹페이지로 보이도록 설정하였다. 
+여기서는 숙제 3 제출용 GibHub 저장소에 작업한 Quarto markdown 소스 파일(`hw03.qmd`)을 올리면 숙제 2에서의 작업 프로세스에 더해 자동 생성된 `.ipynb` 파일을 컨테이너화하여, GitHub에서 자동 생성된 컨테이너 이미지를 Binder 서비스를 이용하여 온라인에서 주피터 노트북 파일을 사용할 수 있도록 한다.
+
+## 문제 3-1. Dockerfile 설정
+
+로컬 저장소 최상위 디렉토리에 아래와 같은 `Dockerfile` 파일을 추가한다. 
+```{yml}
+# 1. 기반 이미지 설정
+FROM rocker/tidyverse:4.4.0
+
+# 2. 시스템 의존성 설치 (ImageMagick 포함)
+USER root
+RUN apt-get update && apt-get install -y \
+    wget \
+    git \
+    imagemagick \
+    libmagick++-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# 3. Miniconda 설치
+ENV CONDA_DIR /opt/conda
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
+    /bin/bash ~/miniconda.sh -b -p /opt/conda && \
+    rm ~/miniconda.sh
+
+# 4. Conda 경로 설정 및 환경 생성
+ENV PATH=$CONDA_DIR/bin:$PATH
+RUN conda create -n r-reticulate python=3.10 -y && \
+    conda install -n r-reticulate -c conda-forge numpy pandas matplotlib -y
+# 추가로 필요한 패키지 설치
+
+# 5. R 패키지 설치 (reticulate 및 필수 패키지)
+RUN R -e "install.packages(c('reticulate', 'remotes', 'IRkernel'))" && \
+    R -e "IRkernel::installspec(user = FALSE)"
+# 추가로 필요한 패키지 설치
+
+# 6. reticulate가 사용할 Python 경로 고정 (환경 변수)
+ENV RETICULATE_PYTHON=/opt/conda/envs/r-reticulate/bin/python
+
+# 7. (선택) Binder 사용자를 위한 권한 설정
+# Binder는 보통 'jovyan' 유저 권한으로 실행
+RUN chown -R ${NB_USER:-root} /opt/conda
+
+# 기본 실행 경로 설정
+WORKDIR /home/rstudio
+```
+
+### 답안
+
+## 문제 3-2. GitHub Actions 워크플로우 수정
+
+숙제 2에서 만들었던 `publish.yml`을 수정하여 기존의 배포 단계 끝에 Docker 컨테이너 이미지를 빌드하고 Github Container Registry (GHCR)에 푸시하는 단계를 추가한다.
+
+```{yml}
+# ... (기존 Quarto Render 단계 이후)
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/my-r-env:latest
+```
+
+### 답안
+
+## 문제 3-3. GitHub Pages에 Binder 링크 추가
+
+GitHub Page를 사용하여 저장소를 웹페이지로 활용하는 부분은 숙제 2에서와 같다.
+
+웹페이지에서 노트북을 내려받는 대신 [Binder](mybinder.org) 서비스를 이용하여 온라인으로 노트북을 실행할 수 있도록 위해 `README.md` 파일을 로컬 저장소 최상위 디렉토리에 다음과 같이 만들자.
+
+```{markdown}
+# 숙제 3
+
+이름: [아무개]
+학번: [나의 학번]
+
+이 숙제의 상세 분석 결과는 아래 링크에서 확인하실 수 있습니다.
+
+* [분석 리포트 (HTML)](./hw03.html) 
+* [주피터 노트북 (ipynb)](https://mybinder.org/v2/ghcr/<유저명>/my-r-env/latest?filepath=hw03.ipynb
+```
+
+여기서 `<유저명>`은 제출자의 GitHub 유저 아이디이다.
+
+작업을 GitHub 원격 저장소로 push한 후 숙제 2 문제 3-3의 3, 4번 과정을 반복하라.
+
+### 답안
+

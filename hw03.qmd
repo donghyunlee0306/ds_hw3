@@ -89,8 +89,6 @@ import statsmodels.formula.api  as smf
 from statsmodels.regression.linear_model import WLS
 from scipy.optimize import curve_fit
 import matplotlib
-matplotlib.use('Agg')
-
 import matplotlib.pyplot as plt
 import warnings
 warnings.filterwarnings("ignore")

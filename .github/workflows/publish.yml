@@ -28,7 +28,7 @@ jobs:
 
       - name: Install Python dependencies via Conda
         run: |
-          conda install -n r-reticulate numpy pandas matplotlib statsmodels scipy scikit-learn
+          conda install -n r-reticulate numpy pandas "matplotlib<3.8" statsmodels scipy scikit-learn
         shell: bash -l {0}
 
       - name: Set up R
@@ -51,7 +51,6 @@ jobs:
 
       - name: Render Quarto
         run: |
-          export MPLBACKEND="Agg"
           export RETICULATE_PYTHON=$(conda info --base)/envs/r-reticulate/bin/python
           quarto render
         shell: bash -l {0}

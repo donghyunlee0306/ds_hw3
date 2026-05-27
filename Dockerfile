@@ -38,7 +38,6 @@ ENV RETICULATE_PYTHON=/opt/conda/envs/r-reticulate/bin/python
 
 # 7. (선택) Binder 사용자를 위한 권한 설정
 # Binder는 보통 'jovyan' 유저 권한으로 실행
-COPY . /home/rstudio
 RUN chown -R ${NB_USER:-root} /opt/conda
 
 # 기본 실행 경로 설정

@@ -50,6 +50,8 @@ jobs:
         run: cp README.md index.md
 
       - name: Render Quarto
+        env:
+          MPLBACKEND: Agg
         run: |
           export RETICULATE_PYTHON=$(conda info --base)/envs/r-reticulate/bin/python
           quarto render

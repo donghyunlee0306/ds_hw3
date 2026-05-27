@@ -4594,7 +4594,7 @@ Dep. Variable:         current_smoker   No. Observations:                 6632
 Model:                          Logit   Df Residuals:                     6616
 Method:                           MLE   Df Model:                           15
 Date:                Wed, 27 May 2026   Pseudo R-squ.:                  0.1207
-Time:                        10:14:59   Log-Likelihood:                -2920.0
+Time:                        10:30:27   Log-Likelihood:                -2920.0
 converged:                       True   LL-Null:                       -3320.9
 Covariance Type:            nonrobust   LLR p-value:                3.663e-161
 ==================================================================================================
@@ -5081,7 +5081,7 @@ Dep. Variable:             logit_WPct   R-squared (uncentered):                 
 Model:                            WLS   Adj. R-squared (uncentered):              0.894
 Method:                 Least Squares   F-statistic:                              1903.
 Date:                Wed, 27 May 2026   Prob (F-statistic):                   1.04e-219
-Time:                        10:15:01   Log-Likelihood:                          393.68
+Time:                        10:30:29   Log-Likelihood:                          393.68
 No. Observations:                 450   AIC:                                     -783.4
 Df Residuals:                     448   BIC:                                     -775.1
 Df Model:                           2                                                  
@@ -5414,7 +5414,7 @@ Dep. Variable:             logit_WPct   R-squared:                       0.943
 Model:                            WLS   Adj. R-squared:                  0.941
 Method:                 Least Squares   F-statistic:                     516.8
 Date:                Wed, 27 May 2026   Prob (F-statistic):          9.70e-261
-Time:                        10:15:03   Log-Likelihood:                 532.89
+Time:                        10:30:32   Log-Likelihood:                 532.89
 No. Observations:                 450   AIC:                            -1036.
 Df Residuals:                     435   BIC:                            -974.1
 Df Model:                          14                                         
@@ -5616,7 +5616,7 @@ Number of Fisher Scoring iterations: 3</code></pre>
 
 Call:
 glm.nb(formula = W ~ logRS + ERA + SHO + SV + offset(log(G)), 
-    data = teams_w, init.theta = 9434086.185, link = log)
+    data = teams_w, init.theta = 9438209.651, link = log)
 
 Coefficients:
               Estimate Std. Error z value Pr(&gt;|z|)    
@@ -5628,7 +5628,7 @@ SV           0.0054504  0.0009061   6.015  1.8e-09 ***
 ---
 Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
 
-(Dispersion parameter for Negative Binomial(9435166) family taken to be 1)
+(Dispersion parameter for Negative Binomial(9438634) family taken to be 1)
 
     Null deviance: 863.87  on 449  degrees of freedom
 Residual deviance:  64.37  on 445  degrees of freedom
@@ -5636,8 +5636,8 @@ AIC: 2876.2
 
 Number of Fisher Scoring iterations: 1
 
-              Theta:  9434086 
-          Std. Err.:  88960028 
+              Theta:  9438210 
+          Std. Err.:  89013587 
 Warning while fitting theta: alternation limit reached 
 
  2 x log-likelihood:  -2864.234 </code></pre>
@@ -5686,7 +5686,7 @@ Dep. Variable:                      W   No. Observations:                  450
 Model:               NegativeBinomial   Df Residuals:                      426
 Method:                           MLE   Df Model:                           23
 Date:                Wed, 27 May 2026   Pseudo R-squ.:                 -0.3736
-Time:                        10:15:22   Log-Likelihood:                -2437.9
+Time:                        10:30:51   Log-Likelihood:                -2437.9
 converged:                      False   LL-Null:                       -1774.9
 Covariance Type:            nonrobust   LLR p-value:                     1.000
 ==============================================================================
@@ -5948,7 +5948,7 @@ Dep. Variable:             logit_WPct   R-squared (uncentered):                 
 Model:                            WLS   Adj. R-squared (uncentered):              0.892
 Method:                 Least Squares   F-statistic:                              3312.
 Date:                Wed, 27 May 2026   Prob (F-statistic):                        0.00
-Time:                        10:15:23   Log-Likelihood:                          702.64
+Time:                        10:30:52   Log-Likelihood:                          702.64
 No. Observations:                 802   AIC:                                     -1401.
 Df Residuals:                     800   BIC:                                     -1392.
 Df Model:                           2                                                  
@@ -6010,12 +6010,12 @@ Notes:
 <span id="cb152-8"><a href="#cb152-8" aria-hidden="true" tabindex="-1"></a>    ax.scatter(sub[<span class="st">&quot;RA&quot;</span>] <span class="op">/</span> sub[<span class="st">&quot;RS&quot;</span>], sub[<span class="st">&quot;WPct&quot;</span>],</span>
 <span id="cb152-9"><a href="#cb152-9" aria-hidden="true" tabindex="-1"></a>               alpha<span class="op">=</span><span class="fl">0.35</span>, s<span class="op">=</span><span class="dv">18</span>, color<span class="op">=</span>color, label<span class="op">=</span>label)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>&lt;matplotlib.collections.PathCollection object at 0x7f808b456fe0&gt;
-&lt;matplotlib.collections.PathCollection object at 0x7f808b4575b0&gt;</code></pre>
+<pre><code>&lt;matplotlib.collections.PathCollection object at 0x7f0b02ce2590&gt;
+&lt;matplotlib.collections.PathCollection object at 0x7f0b02ce2b60&gt;</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb154"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb154-1"><a href="#cb154-1" aria-hidden="true" tabindex="-1"></a>ax.axvline(<span class="fl">1.0</span>, color<span class="op">=</span><span class="st">&quot;gray&quot;</span>, linestyle<span class="op">=</span><span class="st">&quot;--&quot;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>&lt;matplotlib.lines.Line2D object at 0x7f808b4558a0&gt;</code></pre>
+<pre><code>&lt;matplotlib.lines.Line2D object at 0x7f0b02ce0f70&gt;</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb156"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb156-1"><a href="#cb156-1" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">&quot;RA/RS&quot;</span>)<span class="op">;</span> ax.set_ylabel(<span class="st">&quot;WPct&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
@@ -6025,7 +6025,7 @@ Text(0, 0.5, &#39;WPct&#39;)</code></pre>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb158"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb158-1"><a href="#cb158-1" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="st">&quot;WPct vs RA/RS by Era&quot;</span>)<span class="op">;</span> ax.legend()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Text(0.5, 1.0, &#39;WPct vs RA/RS by Era&#39;)
-&lt;matplotlib.legend.Legend object at 0x7f808b4ae950&gt;</code></pre>
+&lt;matplotlib.legend.Legend object at 0x7f0b03255450&gt;</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb160"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb160-1"><a href="#cb160-1" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()<span class="op">;</span> plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">

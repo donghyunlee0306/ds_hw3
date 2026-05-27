@@ -23,7 +23,7 @@ SHELL ["/bin/bash", "-c"]
 ENV PATH=$CONDA_DIR/bin:$PATH
 RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
     conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
-    conda install -y -c conda-forge jupyter && \
+    conda install -y -c conda-forge jupyterlab notebook && \
     conda create -n r-reticulate python=3.10 -y && \
     conda install -n r-reticulate -c conda-forge numpy pandas "matplotlib<3.8" statsmodels scipy scikit-learn -y
 # 추가로 필요한 패키지 설치
@@ -42,3 +42,4 @@ RUN chown -R ${NB_USER:-root} /opt/conda
 
 # 기본 실행 경로 설정
 WORKDIR /home/rstudio
+ENTRYPOINT []

@@ -15,6 +15,7 @@ mainfont: "Noto Sans Korean Light"
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE, fig.width=6, fig.height=4, out.width = "70%", fig.align = "center", python.reticulate = TRUE)  
 options(knitr.table.format = "html")
+Sys.setenv(MPLBACKEND = "Agg")
 if (Sys.getenv("CI") == "true") {
   # GitHub Actions 환경일 때: 환경 이름만 지정하거나 워크플로우에서 설정한 python 사용
   reticulate::use_condaenv("r-reticulate")
@@ -88,8 +89,6 @@ import statsmodels.formula.api  as smf
 from statsmodels.regression.linear_model import WLS
 from scipy.optimize import curve_fit
 import matplotlib
-matplotlib.use('Agg')
-
 import matplotlib.pyplot as plt
 import warnings
 warnings.filterwarnings("ignore")

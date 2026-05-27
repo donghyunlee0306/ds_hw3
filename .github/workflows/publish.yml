@@ -28,7 +28,7 @@ jobs:
 
       - name: Install Python dependencies via Conda
         run: |
-          conda install -n r-reticulate numpy pandas "matplotlib<3.8" statsmodels scipy scikit-learn
+          conda install -n r-reticulate numpy pandas "matplotlib<3.8" statsmodels scipy scikit-learn mosaic
         shell: bash -l {0}
 
       - name: Set up R

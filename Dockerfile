@@ -42,4 +42,5 @@ RUN chown -R ${NB_USER:-root} /opt/conda
 
 # 기본 실행 경로 설정
 WORKDIR /home/rstudio
+COPY hw03.ipynb /home/rstudio/
 ENTRYPOINT []

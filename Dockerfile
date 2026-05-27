@@ -34,6 +34,7 @@ RUN R -e "install.packages(c('reticulate', 'remotes', 'IRkernel', 'knitr', 'rmar
 # 추가로 필요한 패키지 설치
 
 # 6. reticulate가 사용할 Python 경로 고정 (환경 변수)
+COPY ./home/rstudio
 ENV RETICULATE_PYTHON=/opt/conda/envs/r-reticulate/bin/python
 
 # 7. (선택) Binder 사용자를 위한 권한 설정

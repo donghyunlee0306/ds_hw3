@@ -16,6 +16,8 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86
     /bin/bash ~/miniconda.sh -b -p /opt/conda && \
     rm ~/miniconda.sh
 
+SHELL ["/bin/bash", "-c"]
+
 # 4. Conda 경로 설정 및 환경 생성
 ENV PATH=$CONDA_DIR/bin:$PATH
 RUN conda create -n r-reticulate python=3.10 -y && \

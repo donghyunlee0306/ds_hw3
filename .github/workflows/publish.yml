@@ -28,7 +28,7 @@ jobs:
 
       - name: Install Python dependencies via Conda
         run: |
-          conda install -n r-reticulate numpy pandas "matplotlib<3.8" statsmodels scipy scikit-learn mosaic
+          conda install -n r-reticulate numpy pandas "matplotlib<3.8" statsmodels scipy scikit-learn
         shell: bash -l {0}
 
       - name: Set up R
@@ -43,7 +43,7 @@ jobs:
         env:
           GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          install.packages(c("reticulate", "knitr", "rmarkdown", "tidyverse", "NHANES", "Lahman", "broom", "MASS", "minpack.lm"))
+          install.packages(c("reticulate", "knitr", "rmarkdown", "tidyverse", "NHANES", "Lahman", "broom", "MASS", "minpack.lm", "mosaic"))
         shell: Rscript {0}
 
       - name: Prepare README as Index

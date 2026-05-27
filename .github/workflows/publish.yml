@@ -28,7 +28,6 @@ jobs:
 
       - name: Install Python dependencies via Conda
         run: |
-          # 기존 패키지 + 연구에 필요한 수치 계산 패키지 추가
           conda install -n r-reticulate numpy pandas matplotlib polars scipy scikit-learn
         shell: bash -l {0}
 
@@ -44,10 +43,7 @@ jobs:
         env:
           GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 기본 패키지 + 통계 및 시각화 필수 패키지 설치
           install.packages(c("reticulate", "knitr", "rmarkdown", "tidyverse", "ggplot2", "Matrix"))
-          # 베이지안 네트워크나 정밀 행렬 관련 추가 패키지가 있다면 여기에 기술
-          # install.packages("bnlearn") 
         shell: Rscript {0}
 
       - name: Prepare README as Index

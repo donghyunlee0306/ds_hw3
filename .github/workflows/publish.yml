@@ -54,7 +54,7 @@ jobs:
         run: |
           export RETICULATE_PYTHON=$(conda info --base)/envs/r-reticulate/bin/python
           quarto render
-          quarto render hw03.qmd --to ipynb
+          quarto render hw03.qmd --to ipynb --output hw03.ipynb
         shell: bash -l {0}
 
       - name: Deploy to GitHub Pages

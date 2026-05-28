@@ -39,8 +39,9 @@ ENV RETICULATE_PYTHON=/opt/conda/envs/r-reticulate/bin/python
 # Binder용 jovyan 유저 생성
 ENV NB_USER=jovyan
 ENV NB_UID=1000
-RUN useradd -m -s /bin/bash -N -u ${NB_UID} ${NB_USER} && \
-    chown -R ${NB_USER} /opt/conda /home/rstudio
+RUN usermod -l ${NB_USER} rstudio && \
+    usermod -d /home/${NB_USER} -m ${NB_USER} && \
+    chown -R ${NB_USER} /opt/conda /home/${NB_USER}
 
 # 노트북 파일 복사
 COPY _site/hw03.ipynb /home/${NB_USER}/hw03.ipynb

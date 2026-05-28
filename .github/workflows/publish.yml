@@ -57,11 +57,6 @@ jobs:
           quarto render hw03.qmd --to ipynb
         shell: bash -l {0}
 
-      - name: Copy Notebook to Root for Docker
-        run: |
-          find . -name "hw03.ipynb" -exec cp {} ./ \;
-        shell: bash
-
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:

@@ -36,18 +36,18 @@ RUN R -e "install.packages(c('reticulate', 'remotes', 'IRkernel', 'knitr', 'rmar
 # 6. reticulate가 사용할 Python 경로 고정 (환경 변수)
 ENV RETICULATE_PYTHON=/opt/conda/envs/r-reticulate/bin/python
 
-# 7. (선택) Binder 사용자를 위한 권한 설정
-# Binder는 보통 'jovyan' 유저 권한으로 실행
-# RUN chown -R ${NB_USER:-root} /opt/conda
+# Binder용 jovyan 유저 생성
+ENV NB_USER=jovyan
+ENV NB_UID=1000
+RUN useradd -m -s /bin/bash -N -u ${NB_UID} ${NB_USER} && \
+    chown -R ${NB_USER} /opt/conda /home/rstudio
 
-# 기본 실행 경로 설정
-WORKDIR /home/rstudio
-COPY hw03.ipynb /home/rstudio/
+# 노트북 파일 복사
+COPY hw03.ipynb /home/${NB_USER}/hw03.ipynb
+RUN chown ${NB_USER}:users /home/${NB_USER}/hw03.ipynb
 
-# 파일 소유권을 1000번(Binder 접속 일반 유저)으로 변경
-RUN chown -R 1000:1000 /opt/conda /home/rstudio
+USER ${NB_USER}
+WORKDIR /home/${NB_USER}
 
-# 도커 기본 접속자를 1000번 유저로 고정
-USER 1000
-
-ENTRYPOINT []
+# Binder가 기대하는 포트
+EXPOSE 8888

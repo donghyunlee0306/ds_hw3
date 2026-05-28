@@ -70,6 +70,10 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Debug - find ipynb
+        run: find . -name "*.ipynb" 2>/dev/null || echo "NO IPYNB FOUND"
+        shell: bash -l {0}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5

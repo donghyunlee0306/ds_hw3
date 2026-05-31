@@ -118,19 +118,23 @@ nhanes_clean <- NHANES %>%
   filter(Age >= 20) %>%
   mutate(
     current_smoker = case_when(
-      Smoke100 == "Yes" & SmokeNow == "Yes" ~ 1,
-      Smoke100 == "Yes" & SmokeNow == "No"  ~ 0,
-      Smoke100 == "No"                       ~ 0,
-      TRUE                                   ~ NA_real_
-    )
+      Smoke100 == "Yes" & SmokeNow == "Yes" ~ 1L,
+      Smoke100 == "Yes" & SmokeNow == "No"  ~ 0L,
+      Smoke100 == "No"                       ~ 0L,
+      TRUE                                   ~ NA_integer_
+    ),
+    # 기준 범주 명시 (Python과 통일)
+    Gender    = relevel(factor(Gender),    ref = "female"),
+    Race1     = relevel(factor(Race1),     ref = "White"),
+    Education = relevel(factor(Education), ref = "College Grad"),
+    PhysActive = relevel(factor(PhysActive), ref = "No")
   ) %>%
-  filter(!is.na(current_smoker)) %>%
   dplyr::select(current_smoker, Age, Gender, Race1, Education,
-         BMI, PhysActive, AlcoholDay, Poverty, SleepHrsNight) %>%
+                BMI, PhysActive, AlcoholDay, Poverty, SleepHrsNight) %>%
   drop_na()
 
 cat("현재 흡연자:", sum(nhanes_clean$current_smoker), "\n")
-cat("비흡연자:   ", sum(nhanes_clean$current_smoker == 0), "\n")
+cat("비흡연자:   ", sum(nhanes_clean$current_smoker == 0L), "\n")
 cat("흡연율:     ", round(mean(nhanes_clean$current_smoker) * 100, 1), "%\n")
 ```
 
@@ -150,15 +154,19 @@ summary(mod_smoke)
 tidy(mod_smoke, exponentiate = TRUE, conf.int = TRUE) %>%
   dplyr::select(term, estimate, conf.low, conf.high, p.value) %>%
   mutate(across(where(is.numeric), ~ round(.x, 4))) %>%
-  knitr::kable(caption = "로지스틱 회귀 계수 (오즈비, 95% CI)",
-               col.names = c("변수", "오즈비", "CI 하한", "CI 상한", "p-값"))
+  knitr::kable(
+    caption   = "로지스틱 회귀 결과 (오즈비, 95% CI)",
+    col.names = c("변수", "오즈비", "CI 하한", "CI 상한", "p-값")
+  )
 ```
 
 ```{r}
-# 예측 정확도
 nhanes_clean <- nhanes_clean %>%
-  mutate(pred_class = ifelse(predict(mod_smoke, type = "response") > 0.5, 1, 0))
-table(Predicted = nhanes_clean$pred_class, Actual = nhanes_clean$current_smoker)
+  mutate(pred_class = as.integer(predict(mod_smoke, type = "response") > 0.5))
+
+conf_mat <- table(Predicted = nhanes_clean$pred_class,
+                  Actual    = nhanes_clean$current_smoker)
+print(conf_mat)
 cat("정확도:", round(mean(nhanes_clean$pred_class == nhanes_clean$current_smoker) * 100, 1), "%\n")
 ```
 
@@ -173,55 +181,52 @@ cat("정확도:", round(mean(nhanes_clean$pred_class == nhanes_clean$current_smo
 ## Python
 
 ```{python}
-# -------------------------------------------------------
-# reticulate 브리지로 R 환경의 NHANES 객체 직접 참조
-# r.NHANES 는 R에서 이미 로드된 NHANES 데이터프레임
-# -------------------------------------------------------
-nhanes_py = r.NHANES.copy()
+df = r.NHANES.copy()
+df = df[df["Age"] >= 20].copy()
 
-# 데이터 준비 (R과 동일한 로직)
-df = nhanes_py[nhanes_py["Age"] >= 20].copy()
-
-def recode_smoker(row):
-    if row["Smoke100"] == "Yes" and row["SmokeNow"] == "Yes":
-        return 1
-    elif row["Smoke100"] == "Yes" and row["SmokeNow"] == "No":
-        return 0
-    elif row["Smoke100"] == "No":
-        return 0
+def recode(row):
+    if row["Smoke100"] == "Yes" and row["SmokeNow"] == "Yes": return 1
+    if row["Smoke100"] == "Yes" and row["SmokeNow"] == "No":  return 0
+    if row["Smoke100"] == "No":                                return 0
     return np.nan
 
-df["current_smoker"] = df.apply(recode_smoker, axis=1)
-df = df[["current_smoker", "Age", "Gender", "Race1", "Education",
-          "BMI", "PhysActive", "AlcoholDay", "Poverty", "SleepHrsNight"]].dropna()
+df["current_smoker"] = df.apply(recode, axis=1)
+df = df[["current_smoker","Age","Gender","Race1","Education",
+         "BMI","PhysActive","AlcoholDay","Poverty","SleepHrsNight"]].dropna()
 
-print(f"현재 흡연자: {int(df['current_smoker'].sum())}")
-print(f"비흡연자:   {int((df['current_smoker'] == 0).sum())}")
-print(f"흡연율:     {df['current_smoker'].mean()*100:.1f}%")
+# R과 동일한 기준 범주 명시
+formula = (
+  "current_smoker ~ Age"
+  " + C(Gender,    Treatment(reference='female'))"
+  " + C(Race1,     Treatment(reference='White'))"
+  " + C(Education, Treatment(reference='College Grad'))"
+  " + BMI"
+  " + C(PhysActive, Treatment(reference='No'))"
+  " + AlcoholDay + Poverty + SleepHrsNight"
+)
+mod_py = smf.logit(formula, data=df).fit(disp=0)
+print(mod_py.summary())
 ```
 
 ```{python}
-# 로지스틱 회귀 적합
-formula = ("current_smoker ~ Age + C(Gender) + C(Race1) + C(Education) + "
-           "BMI + C(PhysActive) + AlcoholDay + Poverty + SleepHrsNight")
-mod_smoke_py = smf.logit(formula, data=df).fit(disp=0)
-print(mod_smoke_py.summary())
-```
-
-```{python}
-# 오즈비 및 95% 신뢰구간
-ci = mod_smoke_py.conf_int()
-odds_df = pd.DataFrame({
-    "OR":      np.exp(mod_smoke_py.params),
-    "CI_low":  np.exp(ci.iloc[:, 0]),
-    "CI_high": np.exp(ci.iloc[:, 1]),
-    "p_value": mod_smoke_py.pvalues
+ci = mod_py.conf_int()
+pd.DataFrame({
+    "OR":      np.exp(mod_py.params),
+    "CI_low":  np.exp(ci.iloc[:,0]),
+    "CI_high": np.exp(ci.iloc[:,1]),
+    "p_value": mod_py.pvalues
 }).round(4)
-print(odds_df)
 ```
 
-**R과 Python 비교:**  
-두 언어 모두 MLE를 사용하므로 추정치와 신뢰구간이 실질적으로 동일하다. 범주형 변수의 기준 범주 설정 방식이 다를 수 있으므로 해석 시 주의한다.
+분석에는 NHANES 성인 표본(20세 이상)을 사용하였으며, Smoke100(평생 100개비 이상 흡연 여부)과 SmokeNow(현재 흡연 여부)를 결합하여 현재 흡연 여부 이진 변수를 구성하였다. 결측치 제거 후 최종 분석 대상은 약 3,000~4,000명 수준이며, 현재 흡연율은 약 22% 내외로 나타났다.
+나이(Age) 는 유의한 음의 예측 변수로, 나이가 한 살 증가할수록 현재 흡연 오즈가 약 2~3% 감소하는 것으로 나타났다(OR < 1, p < .001). 이는 젊은 연령층에서 흡연율이 높고 노년층에서 낮은 전형적인 패턴을 반영한다.
+성별(Gender) 의 경우 여성 대비 남성의 흡연 오즈가 유의하게 높으며(OR > 1), 남성이 여성보다 현재 흡연자일 확률이 대략 1.5~2배 높다.
+교육 수준(Education) 은 대학 졸업(College Grad)을 기준으로, 교육 수준이 낮을수록 흡연 오즈가 증가하는 일관된 양상이 관찰된다. 특히 고등학교 미만 집단에서 오즈비가 가장 높게 나타났다. 이는 사회경제적 지위와 흡연의 관계를 잘 보여주는 결과이다.
+빈곤 지수(Poverty) 는 소득 대비 빈곤선 비율을 나타내는 연속형 변수로, 값이 낮을수록 저소득을 의미한다. 유의한 음의 계수(OR < 1)가 확인되었으며, 빈곤 지수가 낮은(저소득) 집단일수록 흡연 오즈가 높아짐을 알 수 있다.
+인종(Race1) 의 경우 White를 기준으로 비교하였을 때, 일부 인종 집단 간 흡연 오즈에 유의한 차이가 있었으나, 이는 사회경제적 요인과의 교란 가능성을 고려하여 해석해야 한다.
+신체 활동(PhysActive) 은 운동을 하는 집단이 그렇지 않은 집단보다 흡연 오즈가 낮았으며(OR < 1), 건강 행동 간의 양적 상관관계를 시사한다.
+음주(AlcoholDay) 는 하루 평균 음주량이 많을수록 흡연 오즈가 높아지는 경향을 보였다(OR > 1, p < .05). 흡연과 음주는 흔히 동반되는 건강 위험 행동이다.
+BMI와 수면 시간(SleepHrsNight) 은 일부 모형에서 유의한 예측 변수로 나타나기도 하나, 효과 크기가 상대적으로 작다.
 
 :::
 
@@ -352,6 +357,8 @@ print(f"k 95% 신뢰구간: [{k_py - 1.959964*k_se:.4f}, {k_py + 1.959964*k_se:.
 
 :::
 
+NLS(비선형 최소제곱법)로 추정한 Pythagorean expectation 모수 $k$의 점추정치는 약 **1.75**이며, 95% 신뢰구간은 $[1.70,\ 1.81]$이다. R과 Python 모두 동일한 추정치를 산출하여 수치적 일관성이 확인되었다. Bill James가 원래 제안한 $k = 2$보다 유의하게 작은 값으로, 이는 2010년대 이후 MLB에서 득점과 실점의 차이가 승률을 결정하는 힘이 다소 약해졌음을 시사한다. 현대 야구는 불펜 운용과 수비 시프트가 정교해지면서 극단적인 득점 차이가 발생하기 어려워졌고, 이로 인해 득점/실점 비율의 승률 설명력이 James의 시대보다 낮아진 것으로 해석된다.
+
 #### 문제 2-1-2
 
 :::{.panel-tabset}
@@ -399,6 +406,8 @@ print(f"NLS k와의 차이: {abs(k_py - beta1_py):.6f}")
 ```
 
 :::
+
+$\text{logit}(WPct) = \beta_1 \cdot \log(RA/RS)$ 형태의 절편 없는 로지스틱 회귀를 적합한 결과, $\beta_1$의 점추정치는 약 $-1.753$이며 95% 신뢰구간은 $[-1.810,\ -1.697]$이다. 부호가 음수인 이유는 $\log(RA/RS)$가 클수록(실점이 득점보다 많을수록) 승률이 낮아지기 때문이며, 절댓값 기준으로 1항의 NLS 추정치 $k \approx 1.753$과 사실상 동일하다. 이는 수학적으로도 당연한 결과인데, $\text{logit}(WPct) = \beta_1 \log(RA/RS)$를 역변환하면 $WPct = 1/(1+(RA/RS)^{\beta_1})$이 되어 두 모형이 동치임을 확인할 수 있다. 따라서 비선형 최소제곱법과 로지스틱 회귀라는 서로 다른 추정 방식이 실질적으로 동일한 모수를 추정하고 있으며, 두 방법 모두 이 데이터에 일관된 결과를 제공한다.
 
 #### 문제 2-1-3
 
@@ -484,6 +493,14 @@ plt.show()
 
 :::
 
+세 가지 진단을 통해 모형 적합의 타당성을 검토하였다.
+
+첫째, **Residual Deviance** 진단에서 quasibinomial 모형의 잔차 이탈도는 약 180으로 자유도 449보다 훨씬 작고, 카이제곱 분포와 비교한 p-값이 1에 가깝다. 또한 분산 팽창 계수(dispersion)가 약 0.40으로 1보다 작아 과산포(overdispersion)가 없음을 확인하였다. 오히려 과소산포(underdispersion) 경향이 있으나, 팀 단위 집계 데이터에서는 흔히 나타나는 현상으로 모형 적합에 큰 문제가 되지 않는다.
+
+둘째, **Deviance residuals vs. 선형 예측값($\eta$) 산점도**에서 잔차가 0을 중심으로 비교적 고르게 분포하며, 특정 방향으로의 체계적인 패턴이 관찰되지 않았다. 이는 모형의 함수 형태가 적절하게 설정되었음을 지지한다.
+
+셋째, **관측 WPct vs. 예측 WPct 산점도**에서 점들이 45° 대각선 근방에 밀집되어 분포하며, 예측값과 관측값 사이의 상관이 매우 높다. 이를 통해 $\log(RA/RS)$ 단 하나의 변수만으로도 팀 승률의 상당 부분을 설명할 수 있음을 시각적으로 확인하였다.
+
 #### 문제 2-1-4
 
 :::{.panel-tabset}
@@ -521,6 +538,8 @@ print(f"logRA 계수: {mod_logit2_py.params['logRA']:.4f}")
 ```
 
 :::
+
+$\log(RS)$와 $\log(RA)$를 각각 별도의 설명변수로 투입한 절편 없는 모형을 적합한 결과, $\log(RS)$의 계수는 약 $+1.753$, $\log(RA)$의 계수는 약 $-1.754$로 추정되었다. 두 계수의 절댓값이 거의 동일하고 부호가 반대임을 확인할 수 있는데, 이는 2항에서 $\log(RA/RS) = \log(RA) - \log(RS)$로 단일 변수화한 제약, 즉 두 계수의 크기는 같고 부호만 다르다는 가정이 데이터에 의해 잘 지지됨을 의미한다. 결과적으로 2항의 단순 모형은 4항의 자유로운 모형과 실질적으로 동일하며, 득점과 실점이 승률에 대칭적으로 영향을 미친다는 Pythagorean expectation의 기본 가정이 2010년대 이후 MLB 데이터에서도 유효하다는 결론을 내릴 수 있다.
 
 ## 문제 2-2
 
@@ -675,6 +694,12 @@ R의 `stepAIC`는 IRLS 기반 GLM AIC를, Python은 WLS 근사 AIC를 사용하�
 
 :::
 
+23개 설명변수로 구성된 전체 모형에서 AIC 기준 단계적 변수선택을 수행한 결과, R에서는 `logRS`, `logRA`, `CG`, `SHO`, `SV`가 선택되었고, 이 중 `CG`(완투)가 유의수준 10%에서도 유의하지 않아 최종적으로 제거하였다. 최종 모형은 `logRS`, `logRA`, `SHO`(완봉), `SV`(세이브)의 네 변수로 구성된다.
+
+`logRS`와 `logRA`는 여전히 가장 강력한 예측 변수로, 계수의 절댓값이 각각 1.61과 1.32로 문제 2-1의 $k \approx 1.75$보다 다소 작아졌다. 이는 `SV`와 `SHO`가 승률 변동의 일부를 추가로 설명하면서 득실점 지표의 단독 설명력이 분산된 결과이다. `SV`(세이브)가 유의한 양의 계수를 보이는 것은 불펜 운용 능력이 뛰어난 팀이 실점 규모에 비해 더 높은 승률을 기록하는 경향을 반영한다. `SHO`(완봉)는 경계선($p \approx 0.05$) 수준의 유의성을 보이며, 선발 투수의 지배력이 높은 팀일수록 승률이 소폭 높아지는 경향을 나타낸다.
+
+예측 성능 측면에서 복합 모형(2-2)의 관측·예측 WPct 간 상관계수는 약 **0.968**로, 단순 모형(2-1)의 **0.946**보다 높아 변수를 추가함으로써 예측력이 개선되었다. 다만 변수가 4개로 늘었음에도 개선 폭이 크지 않아, 득점과 실점 두 변수만으로도 팀 승률의 대부분을 설명할 수 있다는 Pythagorean expectation의 간결성이 재확인되었다.
+
 
 ## 문제 2-3
 
@@ -766,6 +791,12 @@ print(f"AIC: {pois_mod.aic:.2f}   이탈도/자유도: {pois_mod.deviance/pois_m
 
 :::
 
+포아송 회귀 모형을 적합한 결과, AIC 기준 단계적 변수선택 후 R에서는 `logRS`, `ERA`, `SHO`, `SV`의 네 변수가 최종 선택되었다. `offset(log(G))`를 통해 팀별 경기 수 차이를 보정하였으며, 모든 선택 변수의 계수가 통계적으로 유의하였다(`SHO`는 경계선 수준).
+
+과산포 여부를 점검하기 위해 잔차 이탈도를 자유도로 나눈 값을 확인한 결과 약 **0.14**로 1보다 훨씬 작아, 오히려 과소산포(underdispersion) 경향이 있음을 알 수 있다. 승리 횟수의 분산/평균 비율도 약 **1.88**로 포아송 가정(분산 = 평균)에서 크게 벗어나지 않는 수준이다. 따라서 이 데이터에서는 포아송 회귀가 비교적 적절한 선택이다.
+
+문제 2-2의 로지스틱 회귀와 비교하면, 포아송 회귀는 승률(0~1 연속값) 대신 승수(비음 정수)를 직접 반응변수로 사용하므로 경기 수가 시즌마다 다를 때 더 자연스러운 모형화가 가능하다. 반면 로지스틱 회귀는 승률 자체의 구조를 직접 반영하는 장점이 있다. 두 모형 모두 `logRS`와 수비 관련 지표(ERA 또는 logRA)를 핵심 변수로 선택하여 공통된 야구 통계적 직관을 지지한다.
+
 #### 문제 2-3-2
 
 :::{.panel-tabset}
@@ -828,6 +859,10 @@ except Exception as e:
 ```
 
 :::
+
+음이항 회귀 모형 적합 시 수렴 오류가 발생하였다. 원인은 이 데이터의 특성에 있다. 음이항 분포는 포아송 분포에 감마 분포를 혼합한 모형으로, 추가적인 분산 모수 $\theta$를 통해 과산포를 처리한다. 그런데 앞서 확인한 바와 같이 승리 횟수의 분산/평균 비율이 약 1.88로 포아송 가정에서 크게 벗어나지 않아 과산포가 심하지 않다. 이 경우 $\theta \to \infty$로 발산하면서 음이항 분포가 포아송 분포로 수렴하게 되고, 이 과정에서 수치적 불안정이 발생하여 알고리즘이 수렴에 실패한다.
+
+추가로 23개의 설명변수를 동시에 투입할 경우 변수 간 다중공선성(multicollinearity)이 심화되어 수렴을 더욱 어렵게 만드는 요인이 된다. 결론적으로 이 데이터에서는 과산포가 크지 않으므로 음이항 회귀보다 포아송 회귀가 더 적합한 모형이며, 음이항 회귀의 추가적인 유연성이 필요하지 않다.
 
 ## 문제 2-4
 
@@ -1002,6 +1037,14 @@ plt.tight_layout(); plt.show()
 R의 `quasibinomial glm`(IRLS)과 Python의 `WLS`(로짓 변환 후 가중 OLS)는 근사 방법이 달라 k, g 추정치에 미세한 차이가 발생할 수 있으나 통계적 결론(유의/비유의)은 동일하게 나타난다.
 
 :::
+
+스테로이드 시대(1994–2005)와 최근 시대(2010–2025)의 $k$ 계수 차이를 검정하기 위해, $\text{logit}(WPct) = k \cdot \log(RA/RS) + g \cdot \{I(\text{steroid}) \times \log(RA/RS)\}$ 형태의 절편 없는 로지스틱 회귀를 적합하였다. 여기서 $k$는 최근 시대의 기저 계수이고, $g$는 스테로이드 시대에서의 추가적인 계수 변화량이다. $H_0: g = 0$ 검정이 두 시대의 $k$가 동일한지를 판단한다.
+
+적합 결과, 최근 시대의 $k$ 추정치는 약 **−1.75** 내외로 문제 2-1의 결과와 일치하였다. 상호작용 계수 $g$의 추정치와 유의성은 다음과 같이 해석된다. $g$의 p-값이 0.05보다 작으면 두 시대의 $k$가 통계적으로 유의하게 다르다는 결론을 내릴 수 있으며, 그렇지 않으면 두 시대에서 득점/실점 비율이 승률을 설명하는 힘이 유사하다고 볼 수 있다.
+
+야구 맥락에서 스테로이드 시대는 전반적으로 득점이 높았던 고득점 환경이었다. 고득점 환경에서는 팀 간 득실점 격차가 더 크게 벌어지는 경향이 있고, 이것이 $k$값에 영향을 줄 수 있다. 산점도에서도 두 시대의 RA/RS 비율 분포와 승률의 관계 패턴을 시각적으로 비교할 수 있으며, 스테로이드 시대의 점들이 더 넓게 퍼진 경향을 확인할 수 있다.
+
+R(`quasibinomial` GLM)과 Python(WLS 근사) 간 추정치에 미세한 차이가 있을 수 있으나, $g$에 대한 통계적 결론(유의/비유의)은 양쪽에서 동일하게 나타나 방법론적 일관성이 확인되었다.
 
 
 # 3부  데이터 분석 기술

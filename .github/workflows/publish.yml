@@ -57,27 +57,9 @@ jobs:
           quarto render hw03.qmd --to ipynb --output hw03.ipynb
         shell: bash -l {0}
 
-      #- name: Create Binder Dockerfile for gh-pages
+      - name: Create Binder Dockerfile for gh-pages
         #run: |
         #  echo "FROM ghcr.io/${{ github.repository_owner }}/my-r-env:latest" > _site/Dockerfile
-      
-      # ↓ 이미지 안에 jovyan 유저 설정 + ipynb 복사를 위한 Dockerfile 생성
-      - name: Create Dockerfile for GHCR image
-        run: |
-          cat > Dockerfile.binder << 'EOF'
-          FROM ubuntu:22.04
-          # Binder 필수 유저
-          ARG NB_USER=jovyan
-          ARG NB_UID=1000
-          ENV USER=${NB_USER} HOME=/home/${NB_USER}
-          RUN apt-get update && apt-get install -y python3 python3-pip jupyter && \
-              adduser --disabled-password --gecos "" --uid ${NB_UID} ${NB_USER}
-          # 렌더링된 notebook 복사
-          COPY hw03.ipynb /home/${NB_USER}/hw03.ipynb
-          RUN chown -R ${NB_USER}:${NB_USER} /home/${NB_USER}
-          USER ${NB_USER}
-          WORKDIR /home/${NB_USER}
-          EOF
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
